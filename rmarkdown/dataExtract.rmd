@@ -1,0 +1,76 @@
+---
+title: "**Modelagem Estatística**"
+subtitle: "Data Extraction"
+author: "Felipe Lamarca"
+output: html_notebook
+---
+
+Vamos extrair os dados da **Base dos Dados** utilizando queries SQL. Para isso, vamos utilizar o pacote `basedosdados` do R.
+
+```{r}
+library(basedosdados)
+library(dplyr)
+```
+
+Os dados são extraídos das tabelas `candidatos`, `bens_candidato` e `despesas_candidato` da base de dados `br_tse_eleicoes`.
+Acesse através do [link](https://basedosdados.org/dataset/eef764df-bde8-4905-b115-6fc23b6ba9d6?table=2e204854-e453-4257-9fef-5e10f3ff1f56).
+
+- A tabela `candidatos` contém informações sobre os candidatos, como nome, partido, cargo, gênero, raça, etc.
+- A tabela `bens_candidato` contém informações sobre os bens declarados pelos candidatos.
+- A tabela `despesas_candidato` contém informações sobre as despesas de campanha dos candidatos.
+
+Vamos extrair os dados dos anos de 2018 e 2022, para todos os estados brasileiros, para o cargo de deputado federal.
+Queremos avaliar os dados apenas para o ano de 2022, mas acessamos os dados de 2018 para verificar se o candidato está
+tentando a reeleição.
+
+```{r}
+# WRITE THE QUERIES
+query1 <- "SELECT DISTINCT c.ano, c.sigla_uf, c.id_candidato_bd, c.nome_urna, c.sigla_partido, c.cargo,
+           c.genero, c.raca, rc.resultado, SUM(rc.votos) votos
+FROM basedosdados.br_tse_eleicoes.candidatos c
+INNER JOIN basedosdados.br_tse_eleicoes.resultados_candidato rc
+ON c.id_candidato_bd = rc.id_candidato_bd
+AND c.ano = rc.ano
+AND c.cargo = 'deputado federal'
+AND c.ano in (2022, 2018)
+GROUP BY c.ano, c.sigla_uf, c.id_candidato_bd, c.nome_urna, c.sigla_partido, c.cargo,
+         c.genero, c.raca, rc.resultado"
+
+query2 = "SELECT DISTINCT c.ano, c.id_candidato_bd, SUM(bc.valor_item) bens_declarados
+FROM basedosdados.br_tse_eleicoes.candidatos c
+INNER JOIN basedosdados.br_tse_eleicoes.bens_candidato bc
+ON c.id_candidato_bd = bc.id_candidato_bd
+AND c.ano = bc.ano
+AND c.cargo = 'deputado federal'
+AND c.ano in (2022, 2018)
+GROUP BY c.ano, c.id_candidato_bd"
+
+query3 = "SELECT DISTINCT c.ano, c.id_candidato_bd, SUM(dc.valor_despesa) despesas_campanha
+FROM basedosdados.br_tse_eleicoes.candidatos c
+INNER JOIN basedosdados.br_tse_eleicoes.despesas_candidato dc
+ON c.id_candidato_bd = dc.id_candidato_bd
+AND c.ano = dc.ano
+AND c.cargo = 'deputado federal'
+AND c.ano in (2022, 2018)
+GROUP BY c.ano, c.id_candidato_bd"
+
+set_billing_id("felipe-388411")
+candidatos <- download(query1, path = "data/candidatos.csv")
+bens <- download(query2, path = "data/bens.csv")
+despesas <- download(query3, path = "data/despesas.csv")
+```
+
+Após acessar os dados, vamos juntá-los em um único arquivo `.csv`.
+
+```{r}
+candidatos <- read.csv("data/candidatos.csv")
+bens <- read.csv("data/bens.csv")
+despesas <- read.csv("data/despesas.csv")
+
+# join the data
+data <- left_join(candidatos, bens, by = c("ano", "id_candidato_bd"))
+data <- left_join(data, despesas, by = c("ano", "id_candidato_bd"))
+
+# write it to a csv file
+write.csv(data, "data/finalData.csv")
+```
