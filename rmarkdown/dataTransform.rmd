@@ -1,0 +1,16 @@
+---
+title: "**Modelagem Estatística**"
+subtitle: "Data Transformation"
+author: "Felipe Lamarca"
+output: html_notebook
+---
+
+The code chunk appears:
+```{r}
+data <- read.csv("data/finalData.csv")
+```
+
+Type any R code in the chunk, for example:
+```{r}
+data
+```
