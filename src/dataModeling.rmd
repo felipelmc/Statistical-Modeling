@@ -1,0 +1,151 @@
+---
+title: "**Modelagem Estatística**"
+subtitle: "**Modelagem dos dados**"
+author: "Felipe Lamarca"
+output: html_notebook
+---
+
+Vamos começar carregando os pacotes necessários para a análise.
+
+```{r}
+library(tidyverse)
+library(lme4)
+library(caret)
+library(MuMIn)
+```
+
+Agora vamos carregar os dados que foram tratados no script de tratamento de dados.
+
+```{r}
+df <- read_csv("../data/finalData.csv")
+
+# remove NAs from despesas_campanha
+df <- df[!is.na(df$despesas_campanha), ]
+
+# standardize despesas_campanha
+df$rescaled_despesas_campanha <- scale(df$despesas_campanha)
+```
+
+Nosso objetivo agora é ajustar modelos estatísticos para os dados. Em particular, suspeitamos que a variável resposta binária `resultado`
+depende fortemente da variável `despesas_campanha`. Vamos ajustar um modelo de regressão logística para os dados.
+
+```{r}
+model1 <- glm(resultado ~ rescaled_despesas_campanha, data = df, family = binomial)
+summary(model1)
+```
+
+No caso específico dos dados eleitorais, temos a possibilidade de ajustar modelos multinível para os dados, uma vez que
+os candidatos estão agrupados por estado, `sigla_uf`. Vamos ajustar um modelo multinível para os dados.
+
+```{r}
+# Fitting the logistic mixed-effects regression model with rescaled predictor
+multilevel <- glmer(resultado ~ rescaled_despesas_campanha + (1|sigla_uf), data = df, family = binomial)
+summary(multilevel)
+```
+
+Parece que o modelo multinível não apresentou melhora significativa em relação ao modelo de regressão logística simples.
+Inclusive, o modelo multinível apresentou um valor de AIC maior que o modelo simples.
+
+```{r}
+model2 <- glmer(resultado ~ rescaled_despesas_campanha + (1|sigla_partido), data = df, family = binomial)
+summary(model2)
+```
+
+Quando ajustamos o modelo multinível considerando o partido como agrupamento, o modelo apresentou uma melhora significativa.
+O valor de AIC diminuiu em relação ao modelo simples e ao modelo multinível considerando o estado como agrupamento.
+
+Vamos começar a ajustar outros modelos para os dados. Vamos começar separando os dados em treinamento e teste, de modo
+que possamos avaliar a capacidade de generalização do modelo.
+
+```{r}
+dados_train <- sample_frac(df, 0.7)  # 70% dos dados para treinamento
+dados_test <- anti_join(df, dados_train)  # Dados restantes para teste
+```
+
+Vamos utilizar novamente o modelo1 para fazer predições nos dados de teste.
+
+```{r}
+# Ajustar o modelo de regressão logística
+modelo1 <- glm(resultado ~ rescaled_despesas_campanha, data = dados_train, family = binomial)
+
+# Fazer predições
+ypred <- predict(modelo1, newdata = dados_test, type = "response")
+
+# Converter as probabilidades em valores de classe usando um limiar de corte
+ypred_class <- ifelse(ypred > 0.5, 1, 0)
+
+# Calcular as métricas
+# 1. Percentual de acerto para os casos em que o candidato foi eleito (Acurácia)
+acuracia_eleito <- sum(ypred_class[dados_test$resultado == 1] == 1) / sum(dados_test$resultado == 1)
+
+# 2. Percentual de acerto para os casos em que o candidato não foi eleito (Acurácia não eleito)
+acuracia_nao_eleito <- sum(ypred_class[dados_test$resultado == 0] == 0) / sum(dados_test$resultado == 0)
+
+# Imprimir as métricas
+print(paste("Acurácia eleito:", acuracia_eleito))
+print(paste("Acurácia não eleito:", acuracia_nao_eleito))
+PseudoR2(modelo1, c("McFadden", "Nagel"))
+```
+
+Agora, vamos ajustar um modelo multinível considerando o partido como agrupamento. No caso, vamos considerar que o efeito
+do gasto de campanha varia entre os partidos.
+
+```{r}
+# Ajustar o modelo de regressão logística
+modelo3 <- glmer(resultado ~ rescaled_despesas_campanha + (0 + rescaled_despesas_campanha|sigla_partido),
+                 data = df, family = binomial)
+
+summary(modelo3)
+
+# Fazer predições
+ypred <- predict(modelo3, newdata = dados_test, type = "response")
+
+# Converter as probabilidades em valores de classe usando um limiar de corte
+ypred_class <- ifelse(ypred > 0.5, 1, 0)
+
+# Calcular as métricas
+# 1. Percentual de acerto para os casos em que o candidato foi eleito (Acurácia)
+acuracia_eleito <- sum(ypred_class[dados_test$resultado == 1] == 1) / sum(dados_test$resultado == 1)
+
+# 2. Percentual de acerto para os casos em que o candidato não foi eleito (Acurácia não eleito)
+acuracia_nao_eleito <- sum(ypred_class[dados_test$resultado == 0] == 0) / sum(dados_test$resultado == 0)
+
+# Imprimir as métricas
+print(paste("Acurácia eleito:", acuracia_eleito))
+print(paste("Acurácia não eleito:", acuracia_nao_eleito))
+r.squaredGLMM(modelo3)
+```
+
+Não houve melhora em relação ao modelo simples. Vamos tentar ajustar um modelo multinível considerando o partido como agrupamento,
+mas agora considerando que os interceptos variam entre os partidos e que o efeito do gasto de campanha também varia entre os partidos.
+Além disso, vamos incluir a variável `tentando_reeleicao` como preditora.
+
+```{r}
+# Ajustar o modelo de regressão logística
+model4 <- glmer(resultado ~ rescaled_despesas_campanha + tentando_reeleicao + (1 | sigla_partido) + (0 + rescaled_despesas_campanha | sigla_partido),
+                data = df, family = binomial)
+
+summary(model4)
+
+# Fazer predições
+ypred <- predict(model3, newdata = dados_test, type = "response")
+
+# Converter as probabilidades em valores de classe usando um limiar de corte
+ypred_class <- ifelse(ypred > 0.5, 1, 0)
+
+# Calcular as métricas
+# 1. Percentual de acerto para os casos em que o candidato foi eleito (Acurácia)
+acuracia_eleito <- sum(ypred_class[dados_test$resultado == 1] == 1) / sum(dados_test$resultado == 1)
+
+# 2. Percentual de acerto para os casos em que o candidato não foi eleito (Acurácia não eleito)
+acuracia_nao_eleito <- sum(ypred_class[dados_test$resultado == 0] == 0) / sum(dados_test$resultado == 0)
+
+# Imprimir as métricas
+print(paste("Acurácia eleito:", acuracia_eleito))
+print(paste("Acurácia não eleito:", acuracia_nao_eleito))
+MuMIn::r.squaredGLMM(model4)
+```
+
+Ao que tudo indica, a despesa de campanha é um excelente preditor para o resultado de eleição, e o efeito dessa variável
+varia entre os partidos. A inclusão da variável `tentando_reeleicao` melhorou significativamente o modelo, e ampliou a
+capacidade preditiva no caso dos candidatos eleitos.
