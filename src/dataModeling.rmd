@@ -8,7 +8,10 @@ output: html_notebook
 Vamos começar carregando os pacotes necessários para a análise.
 
 ```{r}
-library(tidyverse)
+#library(tidyverse)
+library(ggplot2)
+library(dplyr)
+library(readr)
 library(lme4)
 library(caret)
 library(MuMIn)
@@ -25,6 +28,18 @@ df <- df[!is.na(df$despesas_campanha), ]
 # standardize despesas_campanha
 df$standardized_despesas_campanha <- scale(df$despesas_campanha)
 ```
+
+```{r}
+ggplot(df, aes(x = standardized_despesas_campanha, y = resultado)) +
+  geom_point() +                       # Plotar pontos
+  geom_smooth(method = "glm",          # Adicionar linha suave ajustando com regressão logística (modelo glm)
+              method.args = list(family = "binomial"),   # Especificar a família binomial para regressão logística
+              se = FALSE) +            # Não mostrar intervalo de confiança
+  labs(x = "Variável Independente", y = "Variável Dependente") +
+  ggtitle("Relação entre Variável Independente e Variável Dependente") +
+  theme_minimal()
+```
+
 
 ```{r}
 dados_train <- sample_frac(df, 0.7)  # 70% dos dados para treinamento
