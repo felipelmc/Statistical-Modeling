@@ -1,6 +1,6 @@
 # Statistical Modeling
 
-Este repositório reúne os dados, scripts e análises realizadas para o trabalho final da disciplina de Modelagem Estatística, lecionada pelo [Professor Luiz Max Fagundes de Carvalho](https://emap.fgv.br/professores/luiz-max-fagundes-de-carvalho) (FGV EMAp). O objetivo era aplicar técnicas de modelagem, inferência e predição, aprendidas no decorrer desse curso e da disciplina de Inferência Estatística, a dados reais. 
+Este repositório reúne os dados, scripts e análises realizadas para o trabalho final da disciplina de Modelagem Estatística, lecionada pelo [Professor Luiz Max Fagundes de Carvalho](https://emap.fgv.br/professores/luiz-max-fagundes-de-carvalho) (FGV EMAp) ([@maxbiostat](https://github.com/maxbiostat)). O objetivo era aplicar técnicas de modelagem, inferência e predição, aprendidas no decorrer desse curso e da disciplina de Inferência Estatística, a dados reais. 
 
 Escolhi analisar a dinâmica eleitoral para o cargo de deputado federal nas eleições de 2022. São explorados, em particular, modelos multinível (hierárquicos), regressão logística e métodos de avaliação de modelos, como AUC, AIC, acurácia e $R^2$. Além disso, também dialogo com parte da literatura da Ciência Política que utiliza técnicas de Modelagem Estatística para extrair informações sobre as eleições brasileiras.
 
